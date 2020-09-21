@@ -1,0 +1,29 @@
+# stats available at
+# https://travis-ci.org/strukturag/gstreamer-libde265/
+language: c
+compiler:
+  - clang
+  - gcc
+
+env:
+  - GSTREAMER=0.10
+  - GSTREAMER=1.0
+
+before_install:
+  - sudo add-apt-repository -y ppa:strukturag/libde265
+  - sh -c "if [ '$GSTREAMER' = '1.0'   ]; then sudo add-apt-repository -y ppa:gstreamer-developers/ppa; fi"
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libde265-dev libz-dev libbz2-dev gstreamer$GSTREAMER-tools libgstreamer$GSTREAMER-dev libgstreamer-plugins-base$GSTREAMER-dev libgstreamer-plugins-bad$GSTREAMER-dev
+  - sh -c "if [ '$GSTREAMER' = '1.0'   ]; then sudo apt-get install -y libgstreamer-plugins-good$GSTREAMER-dev; fi"
+
+install:
+  - git clone https://github.com/strukturag/libde265-data.git
+
+script:
+  - ./autogen.sh
+  - ./configure --enable-gstreamer$GSTREAMER
+  - make
+  - gst-codec-info-$GSTREAMER `pwd`/src/.libs/libgstlibde265.so
+  - gst-inspect-$GSTREAMER --gst-plugin-path=`pwd`/src/.libs/ gstlibde265
+  - gst-launch-$GSTREAMER --gst-plugin-path=`pwd`/src/.libs/ filesrc location=`pwd`/libde265-data/RandomAccess/paris-ra-wpp.bin ! libde265dec mode=raw ! fakesink sync=false
+  - ./examples/timehevc --gst-plugin-path=`pwd`/src/.libs/ `pwd`/examples/spreedmovie.mkv
